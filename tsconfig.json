@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "moduleResolution": "node",
+    "allowJs": true,
+    "outDir": "./build"
+  },
+  "include": ["./src/**/*"]
+}

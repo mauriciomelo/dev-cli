@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
-const { collaborators } = require('./collaborators');
-
+const { collaborators } = require('../collaborators');
 const { program } = require('./program');
 
 const chalk = require('chalk');
@@ -78,7 +77,7 @@ const buildmessageWithPairs = (pairs, commitMessage) => {
   );
 };
 
-const addEmojiFlags = () =>
+const addEmojiFlags = commitCommand =>
   Object.keys(EMOJI_LIST).forEach(emoji => {
     commitCommand.option(
       `--${emoji}`,
@@ -134,22 +133,25 @@ const promptQuestions = () => {
   ];
 };
 
-const commitCommand = program.action(options => {
-  if (options.message) {
-    const story = branchPrefix();
-    const emojis = intersection(
-      Object.keys(options),
-      Object.keys(EMOJI_LIST)
-    ).map(emoji => EMOJI_LIST[emoji].code);
-    const message = options.message;
-    commit({ message, story, emojis, amend: options.amend });
-  } else {
-    inquirer.prompt(promptQuestions()).then(result => {
-      commit(Object.assign({}, result, { amend: options.amend }));
-    });
-  }
-});
+const commitCommand = program
+  .command('commit')
+  .alias('c')
+  .action(options => {
+    if (options.message) {
+      const story = branchPrefix();
+      const emojis = intersection(
+        Object.keys(options),
+        Object.keys(EMOJI_LIST)
+      ).map(emoji => EMOJI_LIST[emoji].code);
+      const message = options.message;
+      commit({ message, story, emojis, amend: options.amend });
+    } else {
+      inquirer.prompt(promptQuestions()).then(result => {
+        commit(Object.assign({}, result, { amend: options.amend }));
+      });
+    }
+  });
 
-addEmojiFlags();
+addEmojiFlags(commitCommand);
 
-program.parse(process.argv);
+// program.parse(process.argv);
