@@ -9,8 +9,9 @@ const { getMyLastCommitScope } = require('./lastCommitScope');
 const chalk = require('chalk');
 const inquirer = require('inquirer');
 var fuzzy = require('fuzzy');
-const { intersection, isEmpty } = require('ramda');
+const { intersection, isEmpty, prop, uniqBy, eqProps } = require('ramda');
 const shell = require('shelljs');
+const { getLastCommiters } = require('./lastCommiters');
 inquirer.registerPrompt(
   'checkbox-plus',
   require('inquirer-checkbox-plus-prompt')
@@ -74,8 +75,7 @@ const buildmessageWithPairs = (pairs, commitMessage) => {
   }
 
   return pairs.reduce(
-    (message, pair) =>
-      `${message}\nCo-authored-by: ${collaborators[pair].name} <${collaborators[pair].email}>`,
+    (message, pair) => `${message}\nCo-authored-by: ${pair}`,
     `${commitMessage}\n`
   );
 };
@@ -90,8 +90,14 @@ const addEmojiFlags = () =>
 
 const promptQuestions = ({ scope }) => {
   const emojiChoices = Object.keys(EMOJI_LIST);
-  const collaboratorsChoices = [NO_PAIR].concat(Object.keys(collaborators));
+
   return [
+    {
+      type: 'list',
+      name: 'type',
+      message: 'type',
+      choices: emojiChoices,
+    },
     {
       type: 'input',
       name: 'story',
@@ -100,24 +106,25 @@ const promptQuestions = ({ scope }) => {
       validate: input => !!input,
     },
     {
-      type: 'list',
-      name: 'type',
-      message: 'type',
-      choices: emojiChoices,
-    },
-    {
       type: 'checkbox-plus',
       name: 'pairing',
-      message: 'pairing with',
+      message: 'Co-authors',
       pageSize: 5,
       highlight: true,
       searchable: true,
       validate: input => !isEmpty(input),
-      source: function(answersSoFar, input) {
+      source: async function(answersSoFar, input) {
+        const lastCommiters = await getLastCommiters();
+        const people = Object.values(collaborators).concat(lastCommiters);
+        const unique = uniqBy(prop('email'), people);
+        const choices = [NO_PAIR].concat(
+          unique.map(({ name, email }) => `${name} <${email}>`)
+        );
+
         input = input || '';
 
         return new Promise(function(resolve) {
-          var fuzzyResult = fuzzy.filter(input, collaboratorsChoices);
+          var fuzzyResult = fuzzy.filter(input, choices);
 
           var data = fuzzyResult.map(function(element) {
             return element.original;

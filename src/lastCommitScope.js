@@ -16,12 +16,13 @@ module.exports = {
   },
 };
 
+const COMMIT_LIMIT = 100;
 async function getLastCommitByEmail(email) {
   const repo = await NodeGit.Repository.open(pathTorepo);
   const revwalk = await NodeGit.Revwalk.create(repo);
   revwalk.pushHead();
 
-  const commitList = await revwalk.getCommits(30);
+  const commitList = await revwalk.getCommits(COMMIT_LIMIT);
 
   return commitList.find(c => {
     const commiterEmail = c.committer().email();
