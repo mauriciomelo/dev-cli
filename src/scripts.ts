@@ -4,7 +4,6 @@ import { parsePackage } from './parsePackageJson';
 const fs = require('fs');
 const path = require('path');
 import './cli-commit';
-import './cli-clone';
 import './cli-update';
 import { Command } from 'commander';
 const { program, parse } = require('./program');

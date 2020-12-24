@@ -20,10 +20,6 @@ Options:
 
 Commands:
   commit|c          commit your changes
-  clone             clone all repositories if needed
   update            update the CLI
-  some-project|sp   some project commands
   help [cmd]        display help for [cmd]
 ```
-
-Don't forget to add your name to the collaborators.js file!
