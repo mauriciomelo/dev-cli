@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+const columnify = require('columnify');
 const { collaborators } = require('../collaborators');
 
 const { program } = require('./program');
@@ -8,38 +9,37 @@ const { getMyLastCommitScope } = require('./lastCommitScope');
 
 const chalk = require('chalk');
 const inquirer = require('inquirer');
-var fuzzy = require('fuzzy');
-const { intersection, isEmpty, prop, uniqBy, eqProps } = require('ramda');
+const fuzzy = require('fuzzy');
+const { intersection, isEmpty, prop, uniqBy } = require('ramda');
 const shell = require('shelljs');
 const { getLastCommiters } = require('./lastCommiters');
 inquirer.registerPrompt(
   'checkbox-plus',
   require('inquirer-checkbox-plus-prompt')
 );
-
-const EMOJI_LIST = {
-  feat: { image: '✨', code: ':sparkles:', description: 'add new feature' },
-  fix: { image: '🐛', code: ':bug:', description: 'fix bug' },
+const TYPES = {
+  feat: { icon: '✨', code: ':sparkles:', description: 'A new feature' },
+  fix: { icon: '🐛', code: ':bug:', description: 'A bug fix' },
   chore: {
-    image: '🔧',
+    icon: '🔧',
     code: ':wrench:',
-    description: 'updating script tasks etc; no production code change',
+    description: "Other changes that don't modify src or test files",
   },
-  doc: { image: '📚', code: ':books:', description: 'add documentation' },
-  test: { image: '✅', code: ':white_check_mark:', description: 'add test' },
-  style: {
-    image: '🎨',
-    code: ':art:',
-    description: 'update UI and style files',
+  docs: {
+    icon: '📚',
+    code: ':books:',
+    description: 'Documentation only changes',
   },
-  refactor: { image: '🔨', code: ':hammer:', description: 'refactor code' },
-  i18n: {
-    image: '🌐',
-    code: ':globe_with_meridians:',
-    description: 'add globalization/internationalization code',
+  test: {
+    icon: '✅',
+    code: ':white_check_mark:',
+    description: 'Adding missing tests or correcting existing tests',
   },
-  log: { image: '🔊', code: ':loud_sound:', description: 'add log' },
-  unlog: { image: '🔇', code: ':mute:', description: 'remove log' },
+  refactor: {
+    icon: '🔨',
+    code: ':hammer:',
+    description: 'A code change that neither fixes a bug nor adds a feature',
+  },
 };
 
 const NO_PAIR = 'None';
@@ -50,8 +50,27 @@ const exec = (cmd, options) => {
   return execution;
 };
 
+function getTypes() {
+  const types = Object.keys(TYPES).map(key => ({
+    value: key,
+    icon: TYPES[key].icon,
+    description: TYPES[key].description,
+  }));
+
+  const names = columnify(types, {
+    columns: ['value', 'icon', 'description'],
+    showHeaders: false,
+  }).split('\n');
+
+  const choices = types.map(({ value }, index) => ({
+    value,
+    name: names[index],
+  }));
+  return choices;
+}
+
 const commit = ({ story, message, type, amend, pairing }) => {
-  const emoji = EMOJI_LIST[type].code;
+  const emoji = TYPES[type].code;
   const amendOption = amend ? '--amend' : '';
   const commitMessage = `${type}(${story}): ${message} ${emoji}`;
   const commitMessageWithPair = buildmessageWithPairs(
@@ -62,10 +81,10 @@ const commit = ({ story, message, type, amend, pairing }) => {
     `git commit ${amendOption} -m "${commitMessageWithPair.trim()}"`
   ).code;
   const color = code === 0 ? 'greenBright' : 'redBright';
-  const messageWithImages = Object.keys(EMOJI_LIST).reduce((message, emoji) => {
-    return message.replace(EMOJI_LIST[emoji].code, EMOJI_LIST[emoji].image);
+  const messageWithicons = Object.keys(TYPES).reduce((message, emoji) => {
+    return message.replace(TYPES[emoji].code, TYPES[emoji].icon);
   }, commitMessageWithPair);
-  console.log(chalk.bold[color](messageWithImages));
+  console.log(chalk.bold[color](messageWithicons));
   process.exitCode = code;
 };
 
@@ -81,22 +100,26 @@ const buildmessageWithPairs = (pairs, commitMessage) => {
 };
 
 const addEmojiFlags = () =>
-  Object.keys(EMOJI_LIST).forEach(emoji => {
+  Object.keys(TYPES).forEach(emoji => {
     commitCommand.option(
       `--${emoji}`,
-      `${EMOJI_LIST[emoji].image} ${EMOJI_LIST[emoji].description}`
+      `${TYPES[emoji].icon} ${TYPES[emoji].description}`
     );
   });
 
 const promptQuestions = ({ scope }) => {
-  const emojiChoices = Object.keys(EMOJI_LIST);
-
   return [
     {
       type: 'list',
       name: 'type',
       message: 'type',
-      choices: emojiChoices,
+      choices: getTypes(),
+    },
+    {
+      type: 'input',
+      name: 'message',
+      message: 'message',
+      validate: input => !!input,
     },
     {
       type: 'input',
@@ -134,12 +157,6 @@ const promptQuestions = ({ scope }) => {
         });
       },
     },
-    {
-      type: 'input',
-      name: 'message',
-      message: 'message',
-      validate: input => !!input,
-    },
   ];
 };
 
@@ -149,10 +166,9 @@ const commitCommand = program
   .action(async options => {
     if (options.message) {
       const story = branchPrefix();
-      const emojis = intersection(
-        Object.keys(options),
-        Object.keys(EMOJI_LIST)
-      ).map(emoji => EMOJI_LIST[emoji].code);
+      const emojis = intersection(Object.keys(options), Object.keys(TYPES)).map(
+        emoji => TYPES[emoji].code
+      );
       const message = options.message;
       commit({ message, story, emojis, amend: options.amend });
     } else {
