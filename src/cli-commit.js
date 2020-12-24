@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 const { collaborators } = require('../collaborators');
+
 const { program } = require('./program');
+
+const { getMyLastCommitScope } = require('./lastCommitScope');
 
 const chalk = require('chalk');
 const inquirer = require('inquirer');
@@ -77,7 +80,7 @@ const buildmessageWithPairs = (pairs, commitMessage) => {
   );
 };
 
-const addEmojiFlags = commitCommand =>
+const addEmojiFlags = () =>
   Object.keys(EMOJI_LIST).forEach(emoji => {
     commitCommand.option(
       `--${emoji}`,
@@ -85,10 +88,17 @@ const addEmojiFlags = commitCommand =>
     );
   });
 
-const promptQuestions = () => {
+const promptQuestions = ({ scope }) => {
   const emojiChoices = Object.keys(EMOJI_LIST);
   const collaboratorsChoices = [NO_PAIR].concat(Object.keys(collaborators));
   return [
+    {
+      type: 'input',
+      name: 'story',
+      message: 'story',
+      default: scope,
+      validate: input => !!input,
+    },
     {
       type: 'list',
       name: 'type',
@@ -96,17 +106,10 @@ const promptQuestions = () => {
       choices: emojiChoices,
     },
     {
-      type: 'input',
-      name: 'story',
-      message: 'story',
-      default: 'SP-000',
-      validate: input => !!input,
-    },
-    {
       type: 'checkbox-plus',
       name: 'pairing',
       message: 'pairing with',
-      pageSize: 20,
+      pageSize: 5,
       highlight: true,
       searchable: true,
       validate: input => !isEmpty(input),
@@ -136,7 +139,7 @@ const promptQuestions = () => {
 const commitCommand = program
   .command('commit')
   .alias('c')
-  .action(options => {
+  .action(async options => {
     if (options.message) {
       const story = branchPrefix();
       const emojis = intersection(
@@ -146,12 +149,13 @@ const commitCommand = program
       const message = options.message;
       commit({ message, story, emojis, amend: options.amend });
     } else {
-      inquirer.prompt(promptQuestions()).then(result => {
+      const scope = await getMyLastCommitScope();
+      inquirer.prompt(promptQuestions({ scope })).then(result => {
         commit(Object.assign({}, result, { amend: options.amend }));
       });
     }
   });
 
-addEmojiFlags(commitCommand);
+addEmojiFlags();
 
 // program.parse(process.argv);
