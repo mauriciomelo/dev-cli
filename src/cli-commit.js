@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const columnify = require('columnify');
-const { collaborators } = require('../collaborators');
 
 const { program } = require('./program');
 
@@ -138,8 +137,7 @@ const promptQuestions = ({ scope }) => {
       validate: input => !isEmpty(input),
       source: async function(answersSoFar, input) {
         const lastCommiters = await getLastCommiters();
-        const people = Object.values(collaborators).concat(lastCommiters);
-        const unique = uniqBy(prop('email'), people);
+        const unique = uniqBy(prop('email'), lastCommiters);
         const choices = [NO_PAIR].concat(
           unique.map(({ name, email }) => `${name} <${email}>`)
         );
