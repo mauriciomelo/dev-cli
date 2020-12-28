@@ -39,8 +39,6 @@ async function getChangeList(fromTag: string, toTag: string) {
   const deployDate = toCommit.timeMs();
   const changeList = commitList.map(commitToChange(deployDate));
 
-  // console.log({ changeList, leadTimeAvg, leadTimeInDays });
-
   return changeList;
 }
 
@@ -71,8 +69,6 @@ async function getCommitFromTag(repo: NodeGit.Repository, obj: NodeGit.Object) {
   const commit = await tag.target();
   return NodeGit.Commit.lookup(repo, commit.id());
 }
-
-export const leadTime = () => writePoints();
 
 async function getTags(limit: number) {
   const repo = await NodeGit.Repository.open(pathTorepo);
@@ -113,61 +109,72 @@ async function getLeadTime() {
 
   const leadTimeInDays = msToDays(leadTimeAvg);
 
-  fs.writeFileSync('changes.json', JSON.stringify(changeList, null, 2));
-  fs.writeFileSync('changes.csv', parse(changeList));
-
   console.log({ tagsCount, changesCount, leadTimeInDays });
   return changeList;
 }
 
 const RELEASE_COUNT = 30;
 
-async function writePoints() {
-  const DB_NAME = 'monitoring';
-  const influx = new Influx.InfluxDB({
-    host: 'localhost',
-    database: DB_NAME,
-    schema: [
-      {
-        measurement: 'lead_time_for_changes',
-        fields: {
-          leadTimeInDays: Influx.FieldType.FLOAT,
-          deployDate: Influx.FieldType.INTEGER,
-        },
-        tags: ['host'],
-      },
-    ],
-  });
+export interface Options {
+  json: boolean;
+  csv: boolean;
+  influxdb: boolean;
+}
 
-  const dbNames = await influx.getDatabaseNames();
-  console.log({ dbNames });
-
-  await influx.dropDatabase(DB_NAME);
-  await influx.createDatabase(DB_NAME);
-
+export async function writePoints(options: Options) {
   const changeList = await getLeadTime();
 
-  changeList.forEach(c => {
-    influx.writePoints([
-      {
-        measurement: 'lead_time_for_changes',
-        tags: { host: os.hostname() },
-        fields: { leadTimeInDays: c.leadTimeInDays, deployDate: c.deployDate },
-        timestamp: new Date(c.date),
-      },
-    ]);
-  });
+  if (options.csv) {
+    fs.writeFileSync('changes.csv', parse(changeList));
+  }
+  if (options.json) {
+    fs.writeFileSync('changes.json', JSON.stringify(changeList, null, 2));
+  }
+  if (options.influxdb) {
+    const DB_NAME = 'monitoring';
+    const influx = new Influx.InfluxDB({
+      host: 'localhost',
+      database: DB_NAME,
+      schema: [
+        {
+          measurement: 'lead_time_for_changes',
+          fields: {
+            leadTimeInDays: Influx.FieldType.FLOAT,
+            deployDate: Influx.FieldType.INTEGER,
+          },
+          tags: ['host'],
+        },
+      ],
+    });
 
-  const releases = await getTags(RELEASE_COUNT);
+    await influx.dropDatabase(DB_NAME);
+    await influx.createDatabase(DB_NAME);
 
-  releases.forEach(r => {
-    influx.writePoints([
-      {
-        measurement: 'deploy_frequency',
-        tags: { host: os.hostname() },
-        fields: { tag: r.tag },
-        timestamp: new Date(r.date),
-      },
-    ]);
-  });
+    changeList.forEach(c => {
+      influx.writePoints([
+        {
+          measurement: 'lead_time_for_changes',
+          tags: { host: os.hostname() },
+          fields: {
+            leadTimeInDays: c.leadTimeInDays,
+            deployDate: c.deployDate,
+          },
+          timestamp: new Date(c.date),
+        },
+      ]);
+    });
+
+    const releases = await getTags(RELEASE_COUNT);
+
+    releases.forEach(r => {
+      influx.writePoints([
+        {
+          measurement: 'deploy_frequency',
+          tags: { host: os.hostname() },
+          fields: { tag: r.tag },
+          timestamp: new Date(r.date),
+        },
+      ]);
+    });
+  }
 }

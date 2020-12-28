@@ -6,6 +6,11 @@ const path = require('path');
 import './cli-commit';
 import './cli-update';
 import { Command } from 'commander';
+
+if (process.env.EXPERIMENTAL_LEADTIME) {
+  require('./cli-leadtime');
+}
+
 const { program, parse } = require('./program');
 
 let packageJSON = JSON.parse(fs.readFileSync(path.resolve('./package.json')));

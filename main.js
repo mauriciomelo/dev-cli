@@ -1,2 +1,2 @@
 #! /usr/bin/env node
-require('./build/src/scripts.js');
+require('./build/scripts.js');
