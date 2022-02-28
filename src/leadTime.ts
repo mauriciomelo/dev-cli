@@ -113,7 +113,7 @@ async function getLeadTime() {
   return changeList;
 }
 
-const RELEASE_COUNT = 30;
+const RELEASE_COUNT = 100;
 
 export interface Options {
   json: boolean;
