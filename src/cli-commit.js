@@ -10,50 +10,18 @@ const chalk = require('chalk');
 const inquirer = require('inquirer');
 const fuzzy = require('fuzzy');
 const { intersection, isEmpty, prop, uniqBy } = require('ramda');
-const shell = require('shelljs');
 const { getLastCommiters } = require('./lastCommiters');
+const { commit, COMMIT_TYPES, NO_PAIR } = require('./commit');
 inquirer.registerPrompt(
   'checkbox-plus',
   require('inquirer-checkbox-plus-prompt')
 );
-const TYPES = {
-  feat: { icon: '✨', code: ':sparkles:', description: 'A new feature' },
-  fix: { icon: '🐛', code: ':bug:', description: 'A bug fix' },
-  chore: {
-    icon: '🔧',
-    code: ':wrench:',
-    description: "Other changes that don't modify src or test files",
-  },
-  docs: {
-    icon: '📚',
-    code: ':books:',
-    description: 'Documentation only changes',
-  },
-  test: {
-    icon: '✅',
-    code: ':white_check_mark:',
-    description: 'Adding missing tests or correcting existing tests',
-  },
-  refactor: {
-    icon: '🔨',
-    code: ':hammer:',
-    description: 'A code change that neither fixes a bug nor adds a feature',
-  },
-};
-
-const NO_PAIR = 'None';
-
-const exec = (cmd, options) => {
-  const execution = shell.exec(cmd, options);
-  process.exitCode = execution.code;
-  return execution;
-};
 
 function getTypes() {
-  const types = Object.keys(TYPES).map(key => ({
+  const types = Object.keys(COMMIT_TYPES).map(key => ({
     value: key,
-    icon: TYPES[key].icon,
-    description: TYPES[key].description,
+    icon: COMMIT_TYPES[key].icon,
+    description: COMMIT_TYPES[key].description,
   }));
 
   const names = columnify(types, {
@@ -68,41 +36,11 @@ function getTypes() {
   return choices;
 }
 
-const commit = ({ story, message, type, amend, pairing }) => {
-  const emoji = TYPES[type].code;
-  const amendOption = amend ? '--amend' : '';
-  const commitMessage = `${type}(${story}): ${message} ${emoji}`;
-  const commitMessageWithPair = buildmessageWithPairs(
-    pairing.filter(pair => pair !== NO_PAIR),
-    commitMessage
-  );
-  const code = exec(
-    `git commit ${amendOption} -m "${commitMessageWithPair.trim()}"`
-  ).code;
-  const color = code === 0 ? 'greenBright' : 'redBright';
-  const messageWithicons = Object.keys(TYPES).reduce((message, emoji) => {
-    return message.replace(TYPES[emoji].code, TYPES[emoji].icon);
-  }, commitMessageWithPair);
-  console.log(chalk.bold[color](messageWithicons));
-  process.exitCode = code;
-};
-
-const buildmessageWithPairs = (pairs, commitMessage) => {
-  if (isEmpty(pairs)) {
-    return commitMessage;
-  }
-
-  return pairs.reduce(
-    (message, pair) => `${message}\nCo-authored-by: ${pair}`,
-    `${commitMessage}\n`
-  );
-};
-
 const addEmojiFlags = () =>
-  Object.keys(TYPES).forEach(emoji => {
+  Object.keys(COMMIT_TYPES).forEach(emoji => {
     commitCommand.option(
       `--${emoji}`,
-      `${TYPES[emoji].icon} ${TYPES[emoji].description}`
+      `${COMMIT_TYPES[emoji].icon} ${COMMIT_TYPES[emoji].description}`
     );
   });
 
@@ -164,9 +102,10 @@ const commitCommand = program
   .action(async options => {
     if (options.message) {
       const story = branchPrefix();
-      const emojis = intersection(Object.keys(options), Object.keys(TYPES)).map(
-        emoji => TYPES[emoji].code
-      );
+      const emojis = intersection(
+        Object.keys(options),
+        Object.keys(COMMIT_TYPES)
+      ).map(emoji => COMMIT_TYPES[emoji].code);
       const message = options.message;
       commit({ message, story, emojis, amend: options.amend });
     } else {

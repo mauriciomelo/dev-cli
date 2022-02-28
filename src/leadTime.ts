@@ -61,6 +61,7 @@ function msToDays(ms: number) {
   return ms / (1000 * 60 * 60 * 24);
 }
 async function getCommitFromTag(repo: NodeGit.Repository, obj: NodeGit.Object) {
+  // @ts-ignore
   const isCommit = obj.type() == NodeGit.Object.TYPE.COMMIT;
 
   if (isCommit) return NodeGit.Commit.lookup(repo, obj.id());
@@ -88,7 +89,7 @@ async function getTags(limit: number) {
 async function getLeadTime() {
   const tags = await getTags(RELEASE_COUNT);
 
-  const changeListP = tags.reduce((acc, tag, index) => {
+  const changeListP = tags.reduce((acc: Promise<Change[]>[], tag, index) => {
     const toTag = tag.tag;
     const fromTag = tags[index + 1]?.tag;
 

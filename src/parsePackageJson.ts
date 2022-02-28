@@ -4,7 +4,7 @@ const { exec } = require('./program');
 const rootPath = path.resolve('.');
 const run = exec(rootPath);
 
-type Cmd = { name: string; alias: string; action: Function };
+type Cmd = { name: string; alias?: string; action: Function };
 
 interface PackageJSON {
   scripts: { [key: string]: string };
@@ -26,7 +26,7 @@ export function parsePackage(packageJSON: PackageJSON) {
   return commands;
 }
 
-const getAlias = (prevCommands: Cmd[], name: string): string => {
+const getAlias = (prevCommands: Cmd[], name: string): string | undefined => {
   const isDuplicated = prevCommands.some(
     ({ alias }) => alias === getAlias([], name)
   );
