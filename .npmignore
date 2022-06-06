@@ -1,0 +1,6 @@
+# misc
+.DS_Store
+.env
+.env.*
+/.vscode
+/.idea
