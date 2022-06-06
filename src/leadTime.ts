@@ -1,5 +1,5 @@
 import { format, formatDuration, intervalToDuration } from 'date-fns';
-import * as NodeGit from 'nodegit';
+import NodeGit from 'nodegit';
 import { flatten } from 'ramda';
 import * as fs from 'fs';
 import * as os from 'os';

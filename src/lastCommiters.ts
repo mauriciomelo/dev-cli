@@ -1,4 +1,4 @@
-import * as NodeGit from 'nodegit';
+import NodeGit from 'nodegit';
 const path = require('path');
 
 const pathTorepo = path.resolve('.');

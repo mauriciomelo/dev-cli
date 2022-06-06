@@ -12,7 +12,6 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "importHelpers": true,
-    "noEmit": true,
     "strictNullChecks": true,
     "suppressImplicitAnyIndexErrors": true,
     "noUnusedLocals": true,
@@ -24,5 +23,5 @@
     "isolatedModules": true
   },
   "lib": ["es2019"],
-  "include": ["./src/**/*"]
+  "include": ["./src/*"]
 }
